@@ -20,7 +20,7 @@ func main() {
 	checkError(err)
 	// create a mq socket
 	mq_socket := server.NewNsqSocket(configuration.Nsq)
-	// create a db socket
+	// create a redis socket
 	redis_socket, e := redis_socket.NewRedisSocket(configuration.Redis)
 	checkError(e)
 	// create server
