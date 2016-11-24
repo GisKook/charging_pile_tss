@@ -1,0 +1,42 @@
+syntax="proto3";
+package Report;
+
+message ChargingStationStatus{
+	uint64 Timestamp = 1;
+	int32 id = 2;
+	// 充电站名称 
+	string name = 3;
+	// 所属省域 
+	int32 province = 4;
+	// 所属市域 
+	int32 city = 5;
+	// 所属县域 
+	int32 area = 6;
+	// 充电站地址 
+	string address = 7;
+	// 联系人姓名 
+	string contacter = 8;
+	// 联系人手机号 
+	string mobile = 9;
+	// 经度 
+	double lat = 10;
+	// 纬度 
+	double lng = 11;
+	// 运营商 
+	int32 operatorId = 12;
+	// 运营商分成 
+	int32 operatorScale = 13;
+	// 充电桩数量 
+	int32 pileNumber = 14;
+	// 空闲充电桩数量 
+	int32 freePileNumber = 15;
+	// 充电中充电桩数量 
+	int32 workingPileNumber = 16;
+	// 故障充电桩数量 
+	int32 errorPileNumber = 17;
+	// 今日充电金额 单位元 
+	double chargeMoneyToday = 18;
+	// 今日充电量 单位度 
+	double chargeElectricityToday = 19;
+
+}

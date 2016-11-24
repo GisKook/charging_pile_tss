@@ -1,0 +1,27 @@
+{
+    "Uuid": "tss1",
+    "Nsq": {
+        "Producer": {
+            "Addr": "192.168.2.67:4150",
+            "Count": 1
+        },
+        "Consumer": {
+            "Addr": "192.168.2.67:4150",
+            "Topic": "tss",
+            "Channels": [
+                "tss_ch",
+                "tss_ch",
+                "tss_ch",
+                "tss_ch"
+            ]
+        }
+    },
+
+    "Redis": {
+        "Addr": "192.168.2.119:6379",
+	"MaxIdle":100,
+	"IdleTimeOut":240,
+	"Passwd":"",
+	"TranInterval":10
+    }
+}
