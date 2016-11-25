@@ -8,6 +8,7 @@ message ChargingPileStatus{
 		TOBECHARGING = 2; 
 		FULL = 3;
 		MAINTAINACE = 4;
+		OFFLINE = 5;
 	}
 	string das_uuid = 1;
 	uint64 cpid = 2;

@@ -22,6 +22,6 @@
 	"MaxIdle":100,
 	"IdleTimeOut":240,
 	"Passwd":"",
-	"TranInterval":10
+	"TranInterval":5
     }
 }

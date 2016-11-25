@@ -13,17 +13,19 @@ func (socket *RedisSocket) ProcessChargingPile() {
 
 	var index int = 0
 	var pkg *Report.ChargingPileStatus
+	log.Println(socket.ChargingPiles)
 	for index, pkg = range socket.ChargingPiles {
 		conn.Send("GET", pkg.Cpid)
 	}
 
 	conn.Flush()
 
-	tobe_commit_cps := make([]*Report.ChargingPileStatus, 1024)
+	tobe_commit_cps := make([]*Report.ChargingPileStatus, 0)
 	for i := 0; i < index+1; i++ {
 		v_redis, err := conn.Receive()
 
 		if err != nil {
+			log.Println(err.Error())
 			continue
 		}
 
@@ -38,15 +40,20 @@ func (socket *RedisSocket) ProcessChargingPile() {
 				if redis_cps.Timestamp < socket.ChargingPiles[i].Timestamp {
 					tobe_commit_cps = append(tobe_commit_cps, socket.ChargingPiles[i])
 				}
-
 			}
+			socket.ChargingPiles[i] = nil
 		}
 	}
+
+	socket.ChargingPiles = socket.ChargingPiles[:0]
 
 	for _, new_pkg := range tobe_commit_cps {
 		data, _ := proto.Marshal(new_pkg)
 		conn.Send("SET", new_pkg.Cpid, data)
+		new_pkg = nil
 	}
+
+	tobe_commit_cps = tobe_commit_cps[:0]
 
 	conn.Flush()
 	conn.Do("EXEC")

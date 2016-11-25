@@ -22,6 +22,7 @@ func NewServer(nsq_socket *NsqSocket, redis_socket *redis_socket.RedisSocket) *S
 
 func (server *Server) Start() {
 	server.MQ.Start()
+	go server.Redis.DoWork()
 }
 
 func (server *Server) Stop() {

@@ -51,8 +51,8 @@ func NewRedisSocket(config *conf.RedisConfigure) (*RedisSocket, error) {
 				return err
 			},
 		},
-		ChargingPiles:         make([]*Report.ChargingPileStatus, 1024),
-		ChangedChargingePiles: make([]*Report.ChargingPileStatus, 1024),
+		ChargingPiles:         make([]*Report.ChargingPileStatus, 0),
+		ChangedChargingePiles: make([]*Report.ChargingPileStatus, 0),
 		ticker:                time.NewTicker(time.Duration(config.TranInterval) * time.Second),
 	}, nil
 }
@@ -84,6 +84,7 @@ func (socket *RedisSocket) RecvNsqChargingPile(message []byte) {
 	if err != nil {
 		log.Println("unmarshal error")
 	} else {
+		log.Printf("<IN NSQ> %s %d \n", charging_pile_status.DasUuid, charging_pile_status.Cpid)
 		socket.ChargingPiles = append(socket.ChargingPiles, charging_pile_status)
 	}
 }

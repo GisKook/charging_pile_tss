@@ -33,6 +33,7 @@ func (socket *NsqSocket) Start() {
 	producer.Start()
 	socket.Producers[0] = producer
 	socket.ConsumerStart()
+
 }
 
 func (socket *NsqSocket) ConsumerStart() {
