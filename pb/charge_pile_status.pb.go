@@ -32,6 +32,7 @@ const (
 	ChargingPileStatus_TOBECHARGING ChargingPileStatus_ChargingPileStatusType = 2
 	ChargingPileStatus_FULL         ChargingPileStatus_ChargingPileStatusType = 3
 	ChargingPileStatus_MAINTAINACE  ChargingPileStatus_ChargingPileStatusType = 4
+	ChargingPileStatus_OFFLINE      ChargingPileStatus_ChargingPileStatusType = 5
 )
 
 var ChargingPileStatus_ChargingPileStatusType_name = map[int32]string{
@@ -40,6 +41,7 @@ var ChargingPileStatus_ChargingPileStatusType_name = map[int32]string{
 	2: "TOBECHARGING",
 	3: "FULL",
 	4: "MAINTAINACE",
+	5: "OFFLINE",
 }
 var ChargingPileStatus_ChargingPileStatusType_value = map[string]int32{
 	"IDLE":         0,
@@ -47,6 +49,7 @@ var ChargingPileStatus_ChargingPileStatusType_value = map[string]int32{
 	"TOBECHARGING": 2,
 	"FULL":         3,
 	"MAINTAINACE":  4,
+	"OFFLINE":      5,
 }
 
 func (x ChargingPileStatus_ChargingPileStatusType) String() string {

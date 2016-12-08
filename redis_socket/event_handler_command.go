@@ -10,6 +10,7 @@ import (
 func (socket *RedisSocket) ProcessChargingPile() {
 	conn := socket.GetConn()
 	defer conn.Close()
+	conn.Do("SELECT", 1)
 
 	var index int = 0
 	var pkg *Report.ChargingPileStatus
