@@ -1,5 +1,6 @@
 syntax="proto3";
 package Report;
+//package com.cetcnav.lbs.pis.ws.industry.charge.model;
 
 message ChargingStationStatus{
 	uint64 Timestamp = 1;

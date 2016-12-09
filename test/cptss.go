@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/garyburd/redigo/redis"
 	"github.com/giskook/charging_pile_tss/conf"
 	"github.com/giskook/charging_pile_tss/pb"
 	"github.com/giskook/charging_pile_tss/redis_socket"
@@ -53,11 +54,18 @@ func main() {
 		WorkingPileNumber:      10,
 		ErrorPileNumber:        2,
 		ChargeMoneyToday:       1000.3,
-		ChargeElectricityToday: 500.4,
+		ChargeElectricityToday: 500.8,
 	}
 	data, _ := proto.Marshal(station)
+	log.Println(data)
 
 	conn.Do("SET", 1024, data)
+	value, _ := conn.Do("GET", 1024)
+	v, _ := redis.Bytes(value, nil)
+
+	redis_cps := &Report.ChargingStationStatus{}
+	proto.Unmarshal(v, redis_cps)
+	log.Println(redis_cps)
 
 	// catchs system signal
 	chSig := make(chan os.Signal)
