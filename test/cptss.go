@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/garyburd/redigo/redis"
 	"github.com/giskook/charging_pile_tss/conf"
 	"github.com/giskook/charging_pile_tss/pb"
 	"github.com/giskook/charging_pile_tss/redis_socket"
@@ -13,7 +12,6 @@ import (
 	"os/signal"
 	"runtime"
 	"syscall"
-	"time"
 )
 
 func main() {
@@ -35,37 +33,22 @@ func main() {
 	log.Println(reply)
 	log.Println(e)
 
-	station := &Report.ChargingStationStatus{
-		Timestamp:              uint64(time.Now().Unix()),
-		Id:                     1024,
-		Name:                   "cetcnav",
-		City:                   130100,
-		Province:               130000,
-		Area:                   130123,
-		Address:                "luquan",
-		Contacter:              "james",
-		Mobile:                 "13732143001",
-		Lat:                    38.1,
-		Lng:                    108.1,
-		OperatorId:             1,
-		OperatorScale:          3,
-		PileNumber:             16,
-		FreePileNumber:         4,
-		WorkingPileNumber:      10,
-		ErrorPileNumber:        2,
-		ChargeMoneyToday:       1000.3,
-		ChargeElectricityToday: 500.8,
+	pile := &Report.ChargingPileStatus{
+		DasUuid:   "das",
+		Cpid:      1000000000000050,
+		Id:        50,
+		StationId: 14,
 	}
-	data, _ := proto.Marshal(station)
+	data, _ := proto.Marshal(pile)
 	log.Println(data)
 
-	conn.Do("SET", 1024, data)
-	value, _ := conn.Do("GET", 1024)
-	v, _ := redis.Bytes(value, nil)
-
-	redis_cps := &Report.ChargingStationStatus{}
-	proto.Unmarshal(v, redis_cps)
-	log.Println(redis_cps)
+	conn.Do("SET", "14.50.1000000000000050", data)
+	//	value, _ := conn.Do("GET", 1024)
+	//	v, _ := redis.Bytes(value, nil)
+	//
+	//	redis_cps := &Report.ChargingStationStatus{}
+	//	proto.Unmarshal(v, redis_cps)
+	//	log.Println(redis_cps)
 
 	// catchs system signal
 	chSig := make(chan os.Signal)
