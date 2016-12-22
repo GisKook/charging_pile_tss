@@ -19,9 +19,10 @@
 
     "Redis": {
         "Addr": "192.168.2.119:6379",
-	"MaxIdle":100,
+	"MaxIdle":3,
+	"MaxActive":10,
 	"IdleTimeOut":240,
-	"Passwd":"",
+	"Passwd":"redis",
 	"TranInterval":5
     }
 }

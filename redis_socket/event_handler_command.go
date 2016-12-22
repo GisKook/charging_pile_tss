@@ -10,6 +10,7 @@ import (
 
 type charge_pile_status struct {
 	old_status uint8
+	new_status uint8
 	status     *Report.ChargingPileStatus
 }
 
@@ -27,6 +28,8 @@ func GetKey(command *Report.ChargingPileStatus) string {
 }
 
 func (socket *RedisSocket) UpdateChargeStation(pile_status []*charge_pile_status) {
+	log.Println(pile_status[0])
+	log.Println(pile_status[0].status)
 	conn := socket.GetConn()
 	defer conn.Close()
 	conn.Do("SELECT", 0)
@@ -42,31 +45,29 @@ func (socket *RedisSocket) UpdateChargeStation(pile_status []*charge_pile_status
 				error_pile:    0,
 			}
 		}
-		if pile.old_status == 0 {
-			map_station_status[station_id].idle_pile--
-		} else if pile.old_status == 1 ||
-			pile.old_status == 2 ||
-			pile.old_status == 3 {
-			map_station_status[station_id].charging_pile--
-		} else if pile.old_status == 4 ||
-			pile.old_status == 5 {
-			map_station_status[station_id].error_pile--
-		}
+		if pile.old_status != pile.new_status {
+			if pile.old_status == 0 {
+				map_station_status[station_id].idle_pile--
+			} else if pile.old_status == 1 {
+				map_station_status[station_id].charging_pile--
+			} else if pile.old_status == 4 {
+				map_station_status[station_id].error_pile--
+			}
 
-		if pile.old_status == 0 {
-			map_station_status[station_id].idle_pile++
-		} else if pile.old_status == 1 ||
-			pile.old_status == 2 ||
-			pile.old_status == 3 {
-			map_station_status[station_id].charging_pile++
-		} else if pile.old_status == 4 ||
-			pile.old_status == 5 {
-			map_station_status[station_id].error_pile++
+			if pile.new_status == 0 {
+				map_station_status[station_id].idle_pile++
+			} else if pile.new_status == 1 {
+				map_station_status[station_id].charging_pile++
+			} else if pile.new_status == 4 {
+				map_station_status[station_id].error_pile++
+			}
 		}
 	}
 
 	for index, _ := range map_station_status {
 		conn.Send("GET", index)
+		log.Printf("GET station %d\n", index)
+		log.Println(map_station_status[index])
 	}
 
 	conn.Flush()
@@ -85,6 +86,10 @@ func (socket *RedisSocket) UpdateChargeStation(pile_status []*charge_pile_status
 		if err != nil {
 			log.Println("unmarshal error")
 		} else {
+			//redis_stations.FreePileNumber = 2
+			//redis_stations.WorkingPileNumber = 0
+			//redis_stations.ErrorPileNumber = 0
+			//log.Println(_station)
 			redis_stations.FreePileNumber += _station.idle_pile
 			redis_stations.WorkingPileNumber += _station.charging_pile
 			redis_stations.ErrorPileNumber += _station.error_pile
@@ -93,77 +98,88 @@ func (socket *RedisSocket) UpdateChargeStation(pile_status []*charge_pile_status
 		}
 	}
 	for _, new_pkg := range tobe_commit_stations {
+		log.Println(new_pkg)
 		data, _ := proto.Marshal(new_pkg)
 		conn.Send("SET", new_pkg.Id, data)
 		new_pkg = nil
 	}
 	conn.Flush()
 	conn.Do("EXEC")
-	conn.Close()
 }
+
 func (socket *RedisSocket) ProcessChargingPile() {
-	log.Println("proccess charging pile")
+	//log.Println("start proccess charging pile")
 	conn := socket.GetConn()
-	defer conn.Close()
-	conn.Do("SELECT", 1)
+	defer func() {
+		conn.Close()
+		log.Println("end proccess charging_pile")
+	}()
+	if len(socket.ChargingPiles) != 0 {
+		conn.Do("SELECT", 1)
 
-	var index int = 0
-	var pkg *Report.ChargingPileStatus
-	log.Println(socket.ChargingPiles)
-	for index, pkg = range socket.ChargingPiles {
-		conn.Send("GET", GetKey(pkg))
-	}
-
-	conn.Flush()
-
-	tobe_commit_cps := make([]*charge_pile_status, 0)
-	for i := 0; i < index+1; i++ {
-		v_redis, err := conn.Receive()
-
-		if err != nil {
-			log.Println(err.Error())
-			continue
+		var index int = 0
+		var pkg *Report.ChargingPileStatus
+		//log.Println(socket.ChargingPiles)
+		for index, pkg = range socket.ChargingPiles {
+			conn.Send("GET", GetKey(pkg))
+			//log.Println(GetKey(pkg))
 		}
 
-		v, _ := redis.Bytes(v_redis, nil)
+		conn.Flush()
 
-		redis_pile := &Report.ChargingPileStatus{}
-		err = proto.Unmarshal(v, redis_pile)
-		if err != nil {
-			log.Println("unmarshal error")
-		} else {
-			if redis_pile.Timestamp < socket.ChargingPiles[i].Timestamp {
-				redis_pile.Timestamp = socket.ChargingPiles[i].Timestamp
-				redis_pile.DasUuid = socket.ChargingPiles[i].DasUuid
+		tobe_commit_cps := make([]*charge_pile_status, 0)
+		for i := 0; i < index+1; i++ {
+			v_redis, err := conn.Receive()
 
-				old_status := redis_pile.Status
-				redis_pile.Status = socket.ChargingPiles[i].Status
-				redis_pile.ChargingDuration = socket.ChargingPiles[i].ChargingDuration
-				redis_pile.ChargingCapacity = socket.ChargingPiles[i].ChargingCapacity
-				redis_pile.ChargingPrice = socket.ChargingPiles[i].ChargingPrice
-
-				tobe_commit_cps = append(tobe_commit_cps,
-
-					&charge_pile_status{
-						old_status: uint8(old_status),
-						status:     redis_pile})
+			if err != nil {
+				log.Println(err.Error())
+				continue
 			}
-			socket.ChargingPiles[i] = nil
+
+			v, _ := redis.Bytes(v_redis, nil)
+
+			redis_pile := &Report.ChargingPileStatus{}
+			err = proto.Unmarshal(v, redis_pile)
+			if err != nil {
+				log.Println("unmarshal error")
+			} else {
+				//log.Println(redis_pile)
+				if redis_pile.Timestamp < socket.ChargingPiles[i].Timestamp {
+					redis_pile.Timestamp = socket.ChargingPiles[i].Timestamp
+					redis_pile.DasUuid = socket.ChargingPiles[i].DasUuid
+
+					old_status := redis_pile.Status
+					redis_pile.Status = socket.ChargingPiles[i].Status
+					redis_pile.ChargingDuration = socket.ChargingPiles[i].ChargingDuration
+					redis_pile.ChargingCapacity = socket.ChargingPiles[i].ChargingCapacity
+					redis_pile.ChargingPrice = socket.ChargingPiles[i].ChargingPrice
+					redis_pile.CurrentOrderNumber = socket.ChargingPiles[i].CurrentOrderNumber
+
+					tobe_commit_cps = append(tobe_commit_cps,
+
+						&charge_pile_status{
+							old_status: uint8(old_status),
+							new_status: uint8(redis_pile.Status),
+							status:     redis_pile})
+				}
+				//log.Println(redis_pile)
+				socket.ChargingPiles[i] = nil
+			}
 		}
+
+		socket.ChargingPiles = socket.ChargingPiles[:0]
+
+		for _, new_pkg := range tobe_commit_cps {
+			//log.Println(new_pkg.status)
+			data, _ := proto.Marshal(new_pkg.status)
+			conn.Send("SET", GetKey(new_pkg.status), data)
+			//log.Println(GetKey(new_pkg.status))
+			new_pkg = nil
+		}
+		conn.Flush()
+		conn.Do("EXEC")
+		socket.UpdateChargeStation(tobe_commit_cps)
+
+		tobe_commit_cps = tobe_commit_cps[:0]
 	}
-
-	socket.ChargingPiles = socket.ChargingPiles[:0]
-
-	for _, new_pkg := range tobe_commit_cps {
-		data, _ := proto.Marshal(new_pkg.status)
-		conn.Send("SET", GetKey(new_pkg.status), data)
-		log.Println(GetKey(new_pkg.status))
-		new_pkg = nil
-	}
-	conn.Flush()
-	conn.Do("EXEC")
-	conn.Close()
-	socket.UpdateChargeStation(tobe_commit_cps)
-
-	tobe_commit_cps = tobe_commit_cps[:0]
 }
