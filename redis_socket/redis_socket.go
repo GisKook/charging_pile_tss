@@ -97,7 +97,7 @@ func (socket *RedisSocket) RecvNsqChargingPile(message []byte) {
 	charging_pile_status := &Report.ChargingPileStatus{}
 	err := proto.Unmarshal(message, charging_pile_status)
 	if err != nil {
-		log.Println("unmarshal error")
+		log.Println("recv nsq unmarshal error")
 	} else {
 		log.Printf("<IN NSQ> %s %d \n", charging_pile_status.DasUuid, charging_pile_status.Cpid)
 		socket.ChargingPilesChan <- charging_pile_status

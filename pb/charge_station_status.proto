@@ -35,9 +35,8 @@ message ChargingStationStatus{
 	int32 workingPileNumber = 16;
 	// 故障充电桩数量 
 	int32 errorPileNumber = 17;
-	// 今日充电金额 单位元 
-	double chargeMoneyToday = 18;
-	// 今日充电量 单位度 
-	double chargeElectricityToday = 19;
-
+	// 开放起始时间
+	string openStartTime = 18;
+	// 开放结束时间
+	string openEndTime = 19;
 }

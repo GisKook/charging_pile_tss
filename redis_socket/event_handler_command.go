@@ -28,8 +28,8 @@ func GetKey(command *Report.ChargingPileStatus) string {
 }
 
 func (socket *RedisSocket) UpdateChargeStation(pile_status []*charge_pile_status) {
-	log.Println(pile_status[0])
-	log.Println(pile_status[0].status)
+	log.Println("update station")
+	log.Println(len(pile_status))
 	conn := socket.GetConn()
 	defer conn.Close()
 	conn.Do("SELECT", 0)
@@ -84,7 +84,7 @@ func (socket *RedisSocket) UpdateChargeStation(pile_status []*charge_pile_status
 		redis_stations := &Report.ChargingStationStatus{}
 		err = proto.Unmarshal(v, redis_stations)
 		if err != nil {
-			log.Println("unmarshal error")
+			log.Println("update station unmarshal error")
 		} else {
 			//redis_stations.FreePileNumber = 2
 			//redis_stations.WorkingPileNumber = 0
@@ -112,8 +112,8 @@ func (socket *RedisSocket) ProcessChargingPile() {
 	conn := socket.GetConn()
 	defer func() {
 		conn.Close()
-		log.Println("end proccess charging_pile")
 	}()
+	log.Println(len(socket.ChargingPiles))
 	if len(socket.ChargingPiles) != 0 {
 		conn.Do("SELECT", 1)
 
@@ -122,7 +122,7 @@ func (socket *RedisSocket) ProcessChargingPile() {
 		//log.Println(socket.ChargingPiles)
 		for index, pkg = range socket.ChargingPiles {
 			conn.Send("GET", GetKey(pkg))
-			//log.Println(GetKey(pkg))
+			log.Println(GetKey(pkg))
 		}
 
 		conn.Flush()
@@ -141,10 +141,10 @@ func (socket *RedisSocket) ProcessChargingPile() {
 			redis_pile := &Report.ChargingPileStatus{}
 			err = proto.Unmarshal(v, redis_pile)
 			if err != nil {
-				log.Println("unmarshal error")
+				log.Println("ProcessChargingPile unmarshal error ")
 			} else {
 				//log.Println(redis_pile)
-				if redis_pile.Timestamp < socket.ChargingPiles[i].Timestamp {
+				if redis_pile.Timestamp <= socket.ChargingPiles[i].Timestamp {
 					redis_pile.Timestamp = socket.ChargingPiles[i].Timestamp
 					redis_pile.DasUuid = socket.ChargingPiles[i].DasUuid
 

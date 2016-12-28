@@ -71,9 +71,9 @@ func (socket *RedisSocket) PipelineGetValue(keys []string) {
 		redis_pile_status := &Report.ChargingPileStatus{}
 		err = proto.Unmarshal(v, redis_pile_status)
 		if err != nil {
-			log.Println("unmarshal error")
+			log.Println("unmarshal error PipelineGetValue")
 		} else {
-			if redis_pile_status.Status != Report.ChargingPileStatus_MAINTAINACE && redis_pile_status.Status != Report.ChargingPileStatus_OFFLINE {
+			if redis_pile_status.Status != Report.ChargingPileStatus_MAINTAINACE {
 				GetStatusChecker().Insert(redis_pile_status.Cpid, redis_pile_status.Timestamp, time.Now().Unix(), redis_pile_status.Id, redis_pile_status.StationId)
 			}
 		}

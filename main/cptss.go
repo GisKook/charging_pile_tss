@@ -21,6 +21,8 @@ func main() {
 	// create a redis  socket
 	redis_socket, e := redis_socket.NewRedisSocket(configuration.Redis)
 	checkError(e)
+	redis_socket.LoadAll()
+	go redis_socket.DoWork()
 	// create a mq socket
 	mq_socket := mq.GetNsqSocket(configuration.Nsq)
 	mq_socket.Start()
