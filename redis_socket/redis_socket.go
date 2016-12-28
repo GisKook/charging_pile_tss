@@ -10,52 +10,62 @@ import (
 )
 
 type RedisSocket struct {
-	conf                  *conf.RedisConfigure
-	Pool                  *redis.Pool
-	ChargingPiles         []*Report.ChargingPileStatus
-	ChangedChargingePiles []*Report.ChargingPileStatus
+	conf          *conf.RedisConfigure
+	Pool          *redis.Pool
+	ChargingPiles []*Report.ChargingPileStatus
+
+	ChargingPilesChan chan *Report.ChargingPileStatus
 
 	ticker *time.Ticker
 }
 
-func NewRedisSocket(config *conf.RedisConfigure) (*RedisSocket, error) {
-	return &RedisSocket{
-		conf: config,
-		Pool: &redis.Pool{
-			MaxIdle:     config.MaxIdle,
-			MaxActive:   config.MaxActive,
-			IdleTimeout: time.Duration(config.IdleTimeOut) * time.Second,
-			Dial: func() (redis.Conn, error) {
-				c, err := redis.Dial("tcp", config.Addr)
-				if err != nil {
-					log.Println(err.Error())
-					return nil, err
-				}
+var G_RedisSocket *RedisSocket = nil
 
-				if len(config.Passwd) > 0 {
-					if _, err := c.Do("AUTH", config.Passwd); err != nil {
+func GetRedisSocket() *RedisSocket {
+	return G_RedisSocket
+}
+func NewRedisSocket(config *conf.RedisConfigure) (*RedisSocket, error) {
+	if G_RedisSocket == nil {
+		G_RedisSocket = &RedisSocket{
+			conf: config,
+			Pool: &redis.Pool{
+				MaxIdle:     config.MaxIdle,
+				MaxActive:   config.MaxActive,
+				IdleTimeout: time.Duration(config.IdleTimeOut) * time.Second,
+				Dial: func() (redis.Conn, error) {
+					c, err := redis.Dial("tcp", config.Addr)
+					if err != nil {
 						log.Println(err.Error())
-						c.Close()
 						return nil, err
 					}
-				}
 
-				return c, err
-			},
-			TestOnBorrow: func(c redis.Conn, t time.Time) error {
-				if time.Since(t) < time.Minute {
+					if len(config.Passwd) > 0 {
+						if _, err := c.Do("AUTH", config.Passwd); err != nil {
+							log.Println(err.Error())
+							c.Close()
+							return nil, err
+						}
+					}
+
+					return c, err
+				},
+				TestOnBorrow: func(c redis.Conn, t time.Time) error {
+					if time.Since(t) < time.Minute {
+						return nil
+					}
+
+					c.Do("PING")
+
 					return nil
-				}
-
-				_, err := c.Do("PING")
-
-				return err
+				},
 			},
-		},
-		ChargingPiles:         make([]*Report.ChargingPileStatus, 0),
-		ChangedChargingePiles: make([]*Report.ChargingPileStatus, 0),
-		ticker:                time.NewTicker(time.Duration(config.TranInterval) * time.Second),
-	}, nil
+			ChargingPiles:     make([]*Report.ChargingPileStatus, 0),
+			ChargingPilesChan: make(chan *Report.ChargingPileStatus),
+			ticker:            time.NewTicker(time.Duration(config.TranInterval) * time.Second),
+		}
+	}
+
+	return G_RedisSocket, nil
 }
 
 func (socket *RedisSocket) DoWork() {
@@ -67,6 +77,9 @@ func (socket *RedisSocket) DoWork() {
 		select {
 		case <-socket.ticker.C:
 			go socket.ProcessChargingPile()
+			go GetStatusChecker().Check()
+		case p := <-socket.ChargingPilesChan:
+			socket.ChargingPiles = append(socket.ChargingPiles, p)
 		}
 	}
 }
@@ -76,6 +89,7 @@ func (socket *RedisSocket) GetConn() redis.Conn {
 }
 
 func (socket *RedisSocket) Close() {
+	close(socket.ChargingPilesChan)
 	socket.ticker.Stop()
 }
 
@@ -86,6 +100,7 @@ func (socket *RedisSocket) RecvNsqChargingPile(message []byte) {
 		log.Println("unmarshal error")
 	} else {
 		log.Printf("<IN NSQ> %s %d \n", charging_pile_status.DasUuid, charging_pile_status.Cpid)
-		socket.ChargingPiles = append(socket.ChargingPiles, charging_pile_status)
+		socket.ChargingPilesChan <- charging_pile_status
+		GetStatusChecker().Insert(charging_pile_status.Cpid, charging_pile_status.Timestamp, time.Now().Unix(), charging_pile_status.Id, charging_pile_status.StationId)
 	}
 }
