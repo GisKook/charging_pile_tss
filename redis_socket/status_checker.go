@@ -5,12 +5,16 @@ import (
 	"github.com/giskook/charging_pile_tss/conf"
 	"github.com/giskook/charging_pile_tss/pb"
 	"log"
+	"sync"
 	"time"
 )
 
 type Status_Checker struct {
-	Rbt_Cpid_Time *rbtree.Rbtree
-	Rbt_Time_Cpid *rbtree.Rbtree
+	Rbt_Cpid_Time   *rbtree.Rbtree
+	Mutex_Cpid_Time sync.Mutex
+
+	Rbt_Time_Cpid   *rbtree.Rbtree
+	Mutex_Time_Cpid sync.Mutex
 }
 
 type Cpid_Time_Status struct {
@@ -53,6 +57,12 @@ func GetStatusChecker() *Status_Checker {
 }
 
 func (sc *Status_Checker) Insert(cpid uint64, time_stamp uint64, recv_time_stamp int64, db_id uint32, station_id uint32) {
+	sc.Mutex_Cpid_Time.Lock()
+	sc.Mutex_Time_Cpid.Lock()
+	defer func() {
+		sc.Mutex_Cpid_Time.Unlock()
+		sc.Mutex_Time_Cpid.Unlock()
+	}()
 	log.Println("insert")
 	//1.insert into rbt_cpid_time
 	//    1.1 if has ->update timevalue
@@ -99,6 +109,12 @@ func (sc *Status_Checker) Insert(cpid uint64, time_stamp uint64, recv_time_stamp
 }
 
 func (sc *Status_Checker) Del(recv_time_stamp int64) {
+	sc.Mutex_Cpid_Time.Lock()
+	sc.Mutex_Time_Cpid.Lock()
+	defer func() {
+		sc.Mutex_Cpid_Time.Unlock()
+		sc.Mutex_Time_Cpid.Unlock()
+	}()
 
 	//1.del the rbt_time_cpid
 	time_cpid_item := sc.Rbt_Time_Cpid.Get(Time_Cpid_Status{
@@ -116,6 +132,11 @@ func (sc *Status_Checker) Del(recv_time_stamp int64) {
 }
 
 func (sc *Status_Checker) Min() (int64, []*Cpid_Status) {
+	sc.Mutex_Time_Cpid.Lock()
+	defer func() {
+		sc.Mutex_Time_Cpid.Unlock()
+	}()
+
 	if sc.Rbt_Time_Cpid.Len() == 0 {
 		return 0, nil
 	}

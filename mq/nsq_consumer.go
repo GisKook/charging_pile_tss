@@ -54,11 +54,11 @@ func (s *NsqConsumer) Start() {
 
 func (s *NsqConsumer) Stop() {
 
-	errmsg := s.consumer.DisconnectFromNSQD(s.config.Addr)
-
-	if errmsg != nil {
-		log.Printf("stop consumer error ", errmsg.Error())
-	}
-
 	s.consumer.Stop()
+	//	errmsg := s.consumer.DisconnectFromNSQD(s.config.Addr)
+	//
+	//	if errmsg != nil {
+	//		log.Printf("stop consumer error ", errmsg.Error())
+	//	}
+
 }

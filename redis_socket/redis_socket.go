@@ -6,13 +6,15 @@ import (
 	"github.com/giskook/charging_pile_tss/pb"
 	"github.com/golang/protobuf/proto"
 	"log"
+	"sync"
 	"time"
 )
 
 type RedisSocket struct {
-	conf          *conf.RedisConfigure
-	Pool          *redis.Pool
-	ChargingPiles []*Report.ChargingPileStatus
+	conf                *conf.RedisConfigure
+	Pool                *redis.Pool
+	ChargingPiles       []*Report.ChargingPileStatus
+	Mutex_ChargingPiles sync.Mutex
 
 	ChargingPilesChan chan *Report.ChargingPileStatus
 
@@ -79,7 +81,9 @@ func (socket *RedisSocket) DoWork() {
 			go socket.ProcessChargingPile()
 			go GetStatusChecker().Check()
 		case p := <-socket.ChargingPilesChan:
+			socket.Mutex_ChargingPiles.Lock()
 			socket.ChargingPiles = append(socket.ChargingPiles, p)
+			socket.Mutex_ChargingPiles.Unlock()
 		}
 	}
 }

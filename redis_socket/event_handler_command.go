@@ -108,10 +108,12 @@ func (socket *RedisSocket) UpdateChargeStation(pile_status []*charge_pile_status
 }
 
 func (socket *RedisSocket) ProcessChargingPile() {
+	socket.Mutex_ChargingPiles.Lock()
 	//log.Println("start proccess charging pile")
 	conn := socket.GetConn()
 	defer func() {
 		conn.Close()
+		socket.Mutex_ChargingPiles.Unlock()
 	}()
 	log.Println(len(socket.ChargingPiles))
 	if len(socket.ChargingPiles) != 0 {
