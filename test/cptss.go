@@ -22,7 +22,8 @@ func main() {
 	// create a redis socket
 	redis_socket, e := redis_socket.NewRedisSocket(configuration.Redis)
 	checkError(e)
-	redis_socket.LoadAll()
+	//redis_socket.LoadAll()
+	//redis_socket.UpdateSingleStation(15)
 	//	conn := redis_socket.GetConn()
 	//	reply, e := conn.Do("select", 1)
 	//	log.Println(reply)
