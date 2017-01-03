@@ -271,7 +271,12 @@ func (socket *RedisSocket) ProcessChargingPile() {
 					redis_pile.DasUuid = socket.ChargingPiles[i].DasUuid
 
 					old_status := redis_pile.Status
-					redis_pile.Status = socket.ChargingPiles[i].Status
+					if uint8(socket.ChargingPiles[i].Status) > 5 {
+						redis_pile.Status = Report.ChargingPileStatus_MAINTAINACE
+
+					} else {
+						redis_pile.Status = socket.ChargingPiles[i].Status
+					}
 					redis_pile.ChargingDuration = socket.ChargingPiles[i].ChargingDuration
 					redis_pile.ChargingCapacity = socket.ChargingPiles[i].ChargingCapacity
 					redis_pile.ChargingPrice = socket.ChargingPiles[i].ChargingPrice
