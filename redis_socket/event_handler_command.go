@@ -29,15 +29,26 @@ func GetKey(command *Report.ChargingPileStatus) string {
 }
 
 func (socket *RedisSocket) GetStationID(pile_status []*charge_pile_status) []uint32 {
+	if len(pile_status) == 0 {
+		return nil
+	}
 
 	var station_ids []uint32
 	for _, p := range pile_status {
-		if p.old_status == p.new_status {
-			continue
-		}
-		for _, station_id := range station_ids {
-			if station_id != p.status.StationId {
+		if p.old_status != p.new_status {
+			log.Println("status not equal")
+			log.Println(p.old_status)
+			log.Println(p.new_status)
+			if len(station_ids) == 0 {
 				station_ids = append(station_ids, p.status.StationId)
+				log.Println("add station")
+			} else {
+				log.Println("add station")
+				for _, station_id := range station_ids {
+					if station_id != p.status.StationId {
+						station_ids = append(station_ids, p.status.StationId)
+					}
+				}
 			}
 		}
 	}
@@ -46,6 +57,7 @@ func (socket *RedisSocket) GetStationID(pile_status []*charge_pile_status) []uin
 }
 
 func (socket *RedisSocket) CalcSingleStation(station_id uint32) (int32, int32, int32, int32) {
+	log.Println("CalcSingleStation")
 	conn := socket.GetConn()
 	defer conn.Close()
 	conn.Do("SELECT", 1)
@@ -97,6 +109,7 @@ func (socket *RedisSocket) CalcSingleStation(station_id uint32) (int32, int32, i
 }
 
 func (socket *RedisSocket) UpdateSingleStation(station uint32, pile_count int32, idle_pile int32, charging_pile int32, error_pile int32) {
+	log.Println("UpdateSingleStation")
 	conn := socket.GetConn()
 	defer conn.Close()
 	conn.Do("SELECT", 0)
@@ -118,15 +131,19 @@ func (socket *RedisSocket) UpdateSingleStation(station uint32, pile_count int32,
 }
 
 func (socket *RedisSocket) UpdateChargeStation(pile_status []*charge_pile_status) {
+	log.Println("UpdateChargeStation")
 	station_ids := socket.GetStationID(pile_status)
+	log.Println(station_ids)
 	//	conn := socket.GetConn()
 	//	defer conn.Close()
 	//	conn.Do("SELECT", 0)
 
-	for _, station_id := range station_ids {
-		pile_count, idle_pile, charging_pile, error_pile := socket.CalcSingleStation(station_id)
-		socket.UpdateSingleStation(station_id, pile_count, idle_pile, charging_pile, error_pile)
-
+	if station_ids != nil {
+		for _, station_id := range station_ids {
+			pile_count, idle_pile, charging_pile, error_pile := socket.CalcSingleStation(station_id)
+			log.Printf("station id %d total %d idle %d charging %d error %d\n", station_id, pile_count, idle_pile, charging_pile, error_pile)
+			socket.UpdateSingleStation(station_id, pile_count, idle_pile, charging_pile, error_pile)
+		}
 	}
 }
 
@@ -212,7 +229,7 @@ func (socket *RedisSocket) UpdateChargeStation(pile_status []*charge_pile_status
 
 func (socket *RedisSocket) ProcessChargingPile() {
 	socket.Mutex_ChargingPiles.Lock()
-	//log.Println("start proccess charging pile")
+	log.Println("start proccess charging pile")
 	conn := socket.GetConn()
 	defer func() {
 		conn.Close()
@@ -259,6 +276,10 @@ func (socket *RedisSocket) ProcessChargingPile() {
 					redis_pile.ChargingCapacity = socket.ChargingPiles[i].ChargingCapacity
 					redis_pile.ChargingPrice = socket.ChargingPiles[i].ChargingPrice
 					redis_pile.CurrentOrderNumber = socket.ChargingPiles[i].CurrentOrderNumber
+					log.Println("-------")
+					log.Println(old_status)
+					log.Println(redis_pile.Status)
+					log.Println("-------")
 
 					tobe_commit_cps = append(tobe_commit_cps,
 
@@ -275,7 +296,6 @@ func (socket *RedisSocket) ProcessChargingPile() {
 		socket.ChargingPiles = socket.ChargingPiles[:0]
 
 		for _, new_pkg := range tobe_commit_cps {
-			//log.Println(new_pkg.status)
 			data, _ := proto.Marshal(new_pkg.status)
 			conn.Send("SET", GetKey(new_pkg.status), data)
 			//log.Println(GetKey(new_pkg.status))

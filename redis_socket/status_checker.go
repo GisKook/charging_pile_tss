@@ -152,7 +152,6 @@ func (sc *Status_Checker) Check() {
 	var cpids_status []*Cpid_Status
 	for {
 		recv_time, cpids_status = sc.Min()
-		log.Println("check")
 		if cpids_status != nil {
 			if current_time-recv_time > int64(conf.GetConf().Redis.OfflineThreshold) {
 				log.Println("add off line")

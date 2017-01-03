@@ -36,6 +36,8 @@ func (socket *RedisSocket) LoadAll() {
 		keys, e = redis.Strings(cursor_keys[1], nil)
 		CheckError(e)
 		socket.PipelineGetValue(keys)
+		log.Println(cursor)
+		log.Println(keys)
 		if cursor == "0" {
 			return
 		}
@@ -43,40 +45,41 @@ func (socket *RedisSocket) LoadAll() {
 }
 
 func (socket *RedisSocket) PipelineGetValue(keys []string) {
-	conn := socket.GetConn()
-	defer func() {
-		conn.Close()
-	}()
-	conn.Do("SELECT", 1)
+	if len(keys) != 0 {
+		conn := socket.GetConn()
+		defer func() {
+			conn.Close()
+		}()
+		conn.Do("SELECT", 1)
 
-	var index int = 0
-	var key string = ""
-	for index, key = range keys {
-		conn.Send("GET", key)
-		log.Println(key)
-	}
-
-	conn.Flush()
-
-	for i := 0; i < index+1; i++ {
-		v_redis, err := conn.Receive()
-
-		if err != nil {
-			log.Println(err)
-			continue
+		var index int = 0
+		var key string = ""
+		for index, key = range keys {
+			conn.Send("GET", key)
 		}
 
-		v, _ := redis.Bytes(v_redis, nil)
+		conn.Flush()
 
-		redis_pile_status := &Report.ChargingPileStatus{}
-		err = proto.Unmarshal(v, redis_pile_status)
-		if err != nil {
-			log.Println("unmarshal error PipelineGetValue")
-		} else {
-			if redis_pile_status.Status != Report.ChargingPileStatus_MAINTAINACE {
-				GetStatusChecker().Insert(redis_pile_status.Cpid, redis_pile_status.Timestamp, time.Now().Unix(), redis_pile_status.Id, redis_pile_status.StationId)
+		for i := 0; i < index+1; i++ {
+			v_redis, err := conn.Receive()
+
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+
+			v, _ := redis.Bytes(v_redis, nil)
+
+			redis_pile_status := &Report.ChargingPileStatus{}
+			err = proto.Unmarshal(v, redis_pile_status)
+			if err != nil {
+				log.Println("unmarshal error PipelineGetValue")
+			} else {
+				if redis_pile_status.Status != Report.ChargingPileStatus_MAINTAINACE {
+					GetStatusChecker().Insert(redis_pile_status.Cpid, redis_pile_status.Timestamp, time.Now().Unix(), redis_pile_status.Id, redis_pile_status.StationId)
+				}
 			}
 		}
+		conn.Do("")
 	}
-	conn.Do("")
 }
