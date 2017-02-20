@@ -158,7 +158,7 @@ func (sc *Status_Checker) Check() {
 				for _, cpid := range cpids_status {
 					GetRedisSocket().ChargingPilesChan <- &Report.ChargingPileStatus{
 						Cpid:      cpid.Cpid,
-						Status:    Report.ChargingPileStatus_MAINTAINACE,
+						Status:    0,
 						Id:        cpid.DBID,
 						StationId: cpid.StationID,
 						Timestamp: cpid.CpidTime,

@@ -9,6 +9,11 @@ import (
 	"strconv"
 )
 
+const (
+	PROTOCOL_CHARGING_PILE_IDLE     uint8 = 0
+	PROTOCOL_CHARGING_PILE_CHARGING uint8 = 1
+)
+
 type charge_pile_status struct {
 	old_status uint8
 	new_status uint8
@@ -18,7 +23,6 @@ type charge_pile_status struct {
 type charge_station_status struct {
 	idle_pile     int32
 	charging_pile int32
-	error_pile    int32
 }
 
 func GetKey(command *Report.ChargingPileStatus) string {
@@ -56,7 +60,7 @@ func (socket *RedisSocket) GetStationID(pile_status []*charge_pile_status) []uin
 	return station_ids
 }
 
-func (socket *RedisSocket) CalcSingleStation(station_id uint32) (int32, int32, int32, int32) {
+func (socket *RedisSocket) CalcSingleStation(station_id uint32) (int32, int32, int32) {
 	log.Println("CalcSingleStation")
 	conn := socket.GetConn()
 	defer conn.Close()
@@ -78,7 +82,6 @@ func (socket *RedisSocket) CalcSingleStation(station_id uint32) (int32, int32, i
 	pile_count := index + 1
 	var idle_pile int32 = 0
 	var charging_pile int32 = 0
-	var error_pile int32 = 0
 	for i := 0; i < pile_count; i++ {
 		v_redis, err := conn.Receive()
 
@@ -87,28 +90,19 @@ func (socket *RedisSocket) CalcSingleStation(station_id uint32) (int32, int32, i
 
 		err = proto.Unmarshal(v, redis_pile_status)
 		if err == nil {
-			switch redis_pile_status.Status {
-			case Report.ChargingPileStatus_MAINTAINACE:
-				error_pile += 1
-			case Report.ChargingPileStatus_OFFLINE:
-				error_pile += 1
-			case Report.ChargingPileStatus_IDLE:
+			if redis_pile_status.Status == 0 {
 				idle_pile += 1
-			case Report.ChargingPileStatus_CHARGING:
-				charging_pile += 1
-			case Report.ChargingPileStatus_TOBECHARGING:
-				charging_pile += 1
-			case Report.ChargingPileStatus_FULL:
+			} else {
 				charging_pile += 1
 			}
 		}
 	}
 	conn.Do("")
 
-	return int32(pile_count), idle_pile, charging_pile, error_pile
+	return int32(pile_count), idle_pile, charging_pile
 }
 
-func (socket *RedisSocket) UpdateSingleStation(station uint32, pile_count int32, idle_pile int32, charging_pile int32, error_pile int32) {
+func (socket *RedisSocket) UpdateSingleStation(station uint32, pile_count int32, idle_pile int32, charging_pile int32) {
 	log.Println("UpdateSingleStation")
 	conn := socket.GetConn()
 	defer conn.Close()
@@ -123,7 +117,6 @@ func (socket *RedisSocket) UpdateSingleStation(station uint32, pile_count int32,
 	} else {
 		redis_stations.FreePileNumber = idle_pile
 		redis_stations.WorkingPileNumber = charging_pile
-		redis_stations.ErrorPileNumber = error_pile
 		redis_stations.PileNumber = pile_count
 		data, _ := proto.Marshal(redis_stations)
 		conn.Do("SET", station, data)
@@ -140,92 +133,12 @@ func (socket *RedisSocket) UpdateChargeStation(pile_status []*charge_pile_status
 
 	if station_ids != nil {
 		for _, station_id := range station_ids {
-			pile_count, idle_pile, charging_pile, error_pile := socket.CalcSingleStation(station_id)
-			log.Printf("station id %d total %d idle %d charging %d error %d\n", station_id, pile_count, idle_pile, charging_pile, error_pile)
-			socket.UpdateSingleStation(station_id, pile_count, idle_pile, charging_pile, error_pile)
+			pile_count, idle_pile, charging_pile := socket.CalcSingleStation(station_id)
+			log.Printf("station id %d total %d idle %d charging %d \n", station_id, pile_count, idle_pile, charging_pile)
+			socket.UpdateSingleStation(station_id, pile_count, idle_pile, charging_pile)
 		}
 	}
 }
-
-//func (socket *RedisSocket) UpdateChargeStation(pile_status []*charge_pile_status) {
-//	log.Println("update station")
-//	log.Println(len(pile_status))
-//	conn := socket.GetConn()
-//	defer conn.Close()
-//	conn.Do("SELECT", 0)
-//	map_station_status := make(map[uint32]*charge_station_status)
-//
-//	for _, pile := range pile_status {
-//		station_id := pile.status.StationId
-//		_, ok := map_station_status[station_id]
-//		if !ok {
-//			map_station_status[station_id] = &charge_station_status{
-//				idle_pile:     0,
-//				charging_pile: 0,
-//				error_pile:    0,
-//			}
-//		}
-//		if pile.old_status != pile.new_status {
-//			if pile.old_status == 0 {
-//				map_station_status[station_id].idle_pile--
-//			} else if pile.old_status == 1 {
-//				map_station_status[station_id].charging_pile--
-//			} else if pile.old_status == 4 {
-//				map_station_status[station_id].error_pile--
-//			}
-//
-//			if pile.new_status == 0 {
-//				map_station_status[station_id].idle_pile++
-//			} else if pile.new_status == 1 {
-//				map_station_status[station_id].charging_pile++
-//			} else if pile.new_status == 4 {
-//				map_station_status[station_id].error_pile++
-//			}
-//		}
-//	}
-//
-//	for index, _ := range map_station_status {
-//		conn.Send("GET", index)
-//		log.Printf("GET station %d\n", index)
-//		log.Println(map_station_status[index])
-//	}
-//
-//	conn.Flush()
-//
-//	tobe_commit_stations := make([]*Report.ChargingStationStatus, 0)
-//	for _, _station := range map_station_status {
-//		v_redis, err := conn.Receive()
-//		if err != nil {
-//			log.Println(err.Error())
-//			continue
-//		}
-//		v, _ := redis.Bytes(v_redis, nil)
-//
-//		redis_stations := &Report.ChargingStationStatus{}
-//		err = proto.Unmarshal(v, redis_stations)
-//		if err != nil {
-//			log.Println("update station unmarshal error")
-//		} else {
-//			//redis_stations.FreePileNumber = 2
-//			//redis_stations.WorkingPileNumber = 0
-//			//redis_stations.ErrorPileNumber = 0
-//			//log.Println(_station)
-//			redis_stations.FreePileNumber += _station.idle_pile
-//			redis_stations.WorkingPileNumber += _station.charging_pile
-//			redis_stations.ErrorPileNumber += _station.error_pile
-//			tobe_commit_stations = append(tobe_commit_stations,
-//				redis_stations)
-//		}
-//	}
-//	for _, new_pkg := range tobe_commit_stations {
-//		log.Println(new_pkg)
-//		data, _ := proto.Marshal(new_pkg)
-//		conn.Send("SET", new_pkg.Id, data)
-//		new_pkg = nil
-//	}
-//	conn.Flush()
-//	conn.Do("EXEC")
-//}
 
 func (socket *RedisSocket) ProcessChargingPile() {
 	socket.Mutex_ChargingPiles.Lock()
@@ -271,12 +184,7 @@ func (socket *RedisSocket) ProcessChargingPile() {
 					redis_pile.DasUuid = socket.ChargingPiles[i].DasUuid
 
 					old_status := redis_pile.Status
-					if uint8(socket.ChargingPiles[i].Status) > 5 {
-						redis_pile.Status = Report.ChargingPileStatus_MAINTAINACE
-
-					} else {
-						redis_pile.Status = socket.ChargingPiles[i].Status
-					}
+					redis_pile.Status = socket.ChargingPiles[i].Status
 					redis_pile.ChargingDuration = socket.ChargingPiles[i].ChargingDuration
 					redis_pile.ChargingCapacity = socket.ChargingPiles[i].ChargingCapacity
 					redis_pile.ChargingPrice = socket.ChargingPiles[i].ChargingPrice

@@ -1,5 +1,5 @@
 {
-    "Uuid": "tss1",
+    "Uuid": "tss_test",
     "Nsq": {
         "Producer": {
             "Addr": "192.168.2.67:4150",
@@ -7,7 +7,7 @@
         },
         "Consumer": {
             "Addr": "192.168.2.67:4150",
-            "Topic": "tss",
+            "Topic": "tss_test",
             "Channels": [
                 "tss_ch",
                 "tss_ch",
@@ -18,7 +18,7 @@
     },
 
     "Redis": {
-        "Addr": "192.168.2.119:6379",
+        "Addr": "192.168.2.121:6379",
 	"MaxIdle":3,
 	"MaxActive":10,
 	"IdleTimeOut":240,
