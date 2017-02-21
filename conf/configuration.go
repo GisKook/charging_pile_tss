@@ -31,10 +31,20 @@ type RedisConfigure struct {
 	OfflineThreshold int
 }
 
+type DBConfigure struct {
+	Host             string
+	Port             string
+	User             string
+	Passwd           string
+	DbName           string
+	ListenPriceTable string
+}
+
 type Configuration struct {
 	Uuid  string
 	Nsq   *NsqConfiguration
 	Redis *RedisConfigure
+	DB    *DBConfigure
 }
 
 var G_conf *Configuration

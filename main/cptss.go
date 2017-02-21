@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/giskook/charging_pile_tss/conf"
+	"github.com/giskook/charging_pile_tss/db"
 	"github.com/giskook/charging_pile_tss/mq"
 	"github.com/giskook/charging_pile_tss/redis_socket"
 	"log"
@@ -26,12 +27,18 @@ func main() {
 	// create a mq socket
 	mq_socket := mq.GetNsqSocket(configuration.Nsq)
 	mq_socket.Start()
+
+	// create db socket
+	db.NewDbSocket(configuration.DB)
+	db.GetDBSocket().Listen(conf.GetConf().DB.ListenPriceTable)
+
 	// catchs system signal
 	chSig := make(chan os.Signal)
 	signal.Notify(chSig, syscall.SIGINT, syscall.SIGTERM)
 	fmt.Println("Signal: ", <-chSig)
 	redis_socket.Close()
 	mq_socket.Stop()
+	db.GetDBSocket().Listener.UnlistenAll()
 }
 
 func checkError(err error) {

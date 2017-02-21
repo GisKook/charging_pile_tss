@@ -25,5 +25,14 @@
 	"Passwd":"redis",
 	"TranInterval":5,
 	"OfflineThreshold":300
+    },
+
+    "DB": {
+        "Host": "192.168.2.121",
+	"Port": "5432",
+	"User": "postgres",
+	"Passwd":"postgres",
+	"DbName":"cetcnav",
+	"ListenPriceTable":"t_electricity_price"
     }
 }
