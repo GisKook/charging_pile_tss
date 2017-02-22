@@ -187,7 +187,7 @@ func (socket *RedisSocket) ProcessChargingPile() {
 					redis_pile.Status = socket.ChargingPiles[i].Status
 					redis_pile.ChargingDuration = socket.ChargingPiles[i].ChargingDuration
 					redis_pile.ChargingCapacity = socket.ChargingPiles[i].ChargingCapacity
-					redis_pile.ChargingPrice = socket.ChargingPiles[i].ChargingPrice
+					redis_pile.ChargingCost = socket.ChargingPiles[i].ChargingCost
 					redis_pile.CurrentOrderNumber = socket.ChargingPiles[i].CurrentOrderNumber
 					log.Println("-------")
 					log.Println(old_status)
