@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	TRANS_TABLE_NAME_FMT string = "t_charge_pile_200601"
-	SQL_UPDATE_TABLE     string = "UPDATE %s SET start_number=%.2f, end_number=%.2f, electricity=%.2f, money=%.2f, cost=%.2f, time=%d, start_time=time_stamp '%s', end_time=time_stamp '%s', status=%d WHERE order_number = %s"
+	TRANS_TABLE_NAME_FMT string = "t_charge_order_200601"
+	SQL_UPDATE_TABLE     string = "UPDATE %s SET start_number=%.2f, end_number=%.2f, electricity=%.2f, money=%.2f, cost=%.2f, time=%d, start_time=timestamp '%s', end_time=timestamp '%s', status=%d WHERE order_number = '%s'"
 )
 
 func (db_socket *DbSocket) ProccessTransaction() {
@@ -25,6 +25,7 @@ func (db_socket *DbSocket) ProccessTransaction() {
 
 			for trans := range transactions {
 				update_sql := fmt.Sprintf(SQL_UPDATE_TABLE, GetTableName(trans.StartTime), trans.StartMeterReading, trans.EndMeterReading, trans.ChargingCapacity, trans.ChargingCost, trans.ChargingCostEle, trans.ChargingDuration, GetTime(trans.StartTime), GetTime(trans.EndTime), trans.Status, trans.TransactionID)
+				log.Println(update_sql)
 
 				tx.Exec(update_sql)
 				transcation_ids += trans.TransactionID + ","

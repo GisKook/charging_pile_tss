@@ -1,6 +1,5 @@
 syntax="proto3";
 package Report;
-//package com.cetcnav.lbs.pis.ws.industry.charge.model;
 
 message ChargingStationStatus{
 	uint64 Timestamp = 1;
@@ -33,8 +32,11 @@ message ChargingStationStatus{
 	int32 freePileNumber = 15;
 	// 充电中充电桩数量 
 	int32 workingPileNumber = 16;
+	// 故障充电桩数量 
+	int32 errorPileNumber = 17;
 	// 开放起始时间
-	string openStartTime = 17;
+	string openStartTime = 18;
 	// 开放结束时间
-	string openEndTime = 18;
+	string openEndTime = 19;
+
 }

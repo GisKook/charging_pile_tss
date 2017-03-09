@@ -3,7 +3,8 @@
     "Nsq": {
         "Producer": {
             "Addr": "192.168.2.67:4150",
-            "Count": 1
+            "Count": 1,
+            "TopicWeChat":"wxpf_test"
         },
         "Consumer": {
             "Addr": "192.168.2.67:4150",
@@ -33,6 +34,7 @@
 	"User": "postgres",
 	"Passwd":"postgres",
 	"DbName":"cetcnav",
-	"ListenPriceTable":"t_electricity_price"
+	"ListenPriceTable":"t_electricity_price",
+	"TransInterval":5
     }
 }

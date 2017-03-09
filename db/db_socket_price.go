@@ -31,6 +31,8 @@ func (db_socket *DbSocket) LoadAllPrices() error {
 	var sql_electricity_price sql.NullFloat64
 	var sql_service_price sql.NullFloat64
 
+	db_socket.ChargingPricesMutex.Lock()
+
 	for r.Next() {
 		err = r.Scan(
 			&sql_id,
@@ -49,6 +51,7 @@ func (db_socket *DbSocket) LoadAllPrices() error {
 
 		if err != nil {
 			log.Println(err.Error())
+			db_socket.ChargingPricesMutex.Unlock()
 			return err
 		}
 		db_socket.ChargingPrices[station_id] =
@@ -62,7 +65,7 @@ func (db_socket *DbSocket) LoadAllPrices() error {
 				Service_price:   service_price,
 			})
 	}
-	log.Println(db_socket.ChargingPrices)
+	db_socket.ChargingPricesMutex.Unlock()
 
 	defer r.Close()
 
@@ -105,6 +108,9 @@ func (db_socket *DbSocket) parse_payload_price_common(payload string) (uint64, u
 }
 
 func (db_socket *DbSocket) insert_price(payload string) {
+	db_socket.ChargingPricesMutex.Lock()
+	defer db_socket.ChargingPricesMutex.Unlock()
+
 	_, station_id, charging_price := db_socket.parse_payload_price_common(payload)
 	log.Println(db_socket.ChargingPrices[station_id])
 	db_socket.ChargingPrices[station_id] = append(db_socket.ChargingPrices[station_id], charging_price)
@@ -112,6 +118,9 @@ func (db_socket *DbSocket) insert_price(payload string) {
 }
 
 func (db_socket *DbSocket) del_price(payload string) {
+	db_socket.ChargingPricesMutex.Lock()
+	defer db_socket.ChargingPricesMutex.Unlock()
+
 	id, station_id, _ := db_socket.parse_payload_price_common(payload)
 	for i, p := range db_socket.ChargingPrices[station_id] {
 		if p.ID == id {
@@ -124,6 +133,9 @@ func (db_socket *DbSocket) del_price(payload string) {
 }
 
 func (db_socket *DbSocket) update_price(payload string) {
+	db_socket.ChargingPricesMutex.Lock()
+	defer db_socket.ChargingPricesMutex.Unlock()
+
 	id, station_id, price := db_socket.parse_payload_price_common(payload)
 	for i, p := range db_socket.ChargingPrices[station_id] {
 		if p.ID == id {
@@ -131,4 +143,27 @@ func (db_socket *DbSocket) update_price(payload string) {
 			return
 		}
 	}
+}
+
+func (db_socket *DbSocket) GetUnitPrice(station_id uint32, cur_time uint64) (float32, float32) {
+	db_socket.ChargingPricesMutex.Lock()
+	defer db_socket.ChargingPricesMutex.Unlock()
+
+	charging_prices := db_socket.ChargingPrices[uint64(station_id)]
+	if charging_prices != nil {
+		_rest_time := (cur_time % (24 * 60 * 60))
+		_hour := uint8(_rest_time / (60 * 60))
+		_min := uint8((_rest_time % (60 * 60)) / 60)
+		for index := range charging_prices {
+			price := charging_prices[index]
+			if base.In_period(price.Start_hour, price.Start_min,
+				price.End_hour, price.End_min, _hour, _min) {
+
+				return price.Elec_unit_price, price.Service_price
+			}
+		}
+	}
+	log.Println("there is no price here GetUnitPrice")
+
+	return 0.0, 0.0
 }

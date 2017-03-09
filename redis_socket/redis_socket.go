@@ -2,6 +2,7 @@ package redis_socket
 
 import (
 	"github.com/garyburd/redigo/redis"
+	"github.com/giskook/charging_pile_tss/base"
 	"github.com/giskook/charging_pile_tss/conf"
 	"github.com/giskook/charging_pile_tss/pb"
 	"github.com/golang/protobuf/proto"
@@ -16,7 +17,9 @@ type RedisSocket struct {
 	ChargingPiles       []*Report.ChargingPileStatus
 	Mutex_ChargingPiles sync.Mutex
 
-	ChargingPilesChan chan *Report.ChargingPileStatus
+	ChargingPilesChan      chan *Report.ChargingPileStatus
+	ChargingCost           chan *base.ChargingCost
+	StopChargingNotifyChan chan *base.StopChargingNotify
 
 	ticker *time.Ticker
 }
@@ -90,6 +93,14 @@ func (socket *RedisSocket) DoWork() {
 
 func (socket *RedisSocket) GetConn() redis.Conn {
 	return socket.Pool.Get()
+}
+
+func (socket *RedisSocket) SetFeedbackChan(ch chan *base.ChargingCost) {
+	socket.ChargingCost = ch
+}
+
+func (socket *RedisSocket) SetStopChargingNotifyChan(ch chan *base.StopChargingNotify) {
+	socket.StopChargingNotifyChan = ch
 }
 
 func (socket *RedisSocket) Close() {

@@ -24,13 +24,17 @@ func main() {
 	checkError(e)
 	redis_socket.LoadAll()
 	go redis_socket.DoWork()
-	// create a mq socket
-	mq_socket := mq.GetNsqSocket(configuration.Nsq)
-	mq_socket.Start()
 
 	// create db socket
 	db.NewDbSocket(configuration.DB)
 	db.GetDBSocket().Listen(conf.GetConf().DB.ListenPriceTable)
+	db.GetDBSocket().LoadAllPrices()
+	go db.GetDBSocket().WaitForNotification()
+	go db.GetDBSocket().ProccessTransaction()
+
+	// create a mq socket
+	mq_socket := mq.GetNsqSocket(configuration.Nsq)
+	mq_socket.Start()
 
 	// catchs system signal
 	chSig := make(chan os.Signal)

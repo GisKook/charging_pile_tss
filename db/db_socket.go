@@ -13,8 +13,11 @@ import (
 )
 
 type DbSocket struct {
-	Db             *sql.DB
-	ChargingPrices map[uint64][]*base.ChargingPrice
+	Db                  *sql.DB
+	ChargingPricesMutex sync.Mutex
+	ChargingPrices      map[uint64][]*base.ChargingPrice
+	TransactionChan     chan chan *base.TransactionDetail
+	NotifyChan          chan string
 
 	Listener *pq.Listener
 }
@@ -42,12 +45,17 @@ func NewDbSocket(db_config *conf.DBConfigure) (*DbSocket, error) {
 	}
 
 	G_DBSocket = &DbSocket{
-		Db:             db,
-		Listener:       pq.NewListener(conn_string, 60*time.Second, time.Minute, reportProblem),
-		ChargingPrices: make(map[uint64][]*base.ChargingPrice),
+		Db:              db,
+		Listener:        pq.NewListener(conn_string, 60*time.Second, time.Minute, reportProblem),
+		ChargingPrices:  make(map[uint64][]*base.ChargingPrice),
+		TransactionChan: make(chan chan *base.TransactionDetail),
 	}
 
 	return G_DBSocket, nil
+}
+
+func (db_socket *DbSocket) SetNotifyChan(ch chan string) {
+	db_socket.NotifyChan = ch
 }
 
 func (db_socket *DbSocket) Listen(table string) error {

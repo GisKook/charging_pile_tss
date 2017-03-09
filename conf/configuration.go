@@ -6,8 +6,9 @@ import (
 )
 
 type ProducerConf struct {
-	Addr  string
-	Count int
+	Addr        string
+	Count       int
+	TopicWeChat string
 }
 
 type ConsumerConf struct {
@@ -38,6 +39,7 @@ type DBConfigure struct {
 	Passwd           string
 	DbName           string
 	ListenPriceTable string
+	TransInterval    uint8
 }
 
 type Configuration struct {
