@@ -92,9 +92,8 @@ func (db_socket *DbSocket) parse_payload_price_common(payload string) (uint64, u
 	end_time_string := values[5]
 	elec_unit_price, _ := strconv.ParseFloat(values[6], 32)
 	service_price, _ := strconv.ParseFloat(values[7], 32)
-	start_time, _ := time.Parse(time.Stamp, start_time_string)
-	end_time, _ := time.Parse(time.Stamp, end_time_string)
-	log.Println(start_time)
+	start_time, _ := time.Parse("15:04:05", start_time_string)
+	end_time, _ := time.Parse("15:04:05", end_time_string)
 
 	return id, station_id, &base.ChargingPrice{
 		ID:              id,
@@ -123,7 +122,7 @@ func (db_socket *DbSocket) del_price(payload string) {
 
 	id, station_id, _ := db_socket.parse_payload_price_common(payload)
 	for i, p := range db_socket.ChargingPrices[station_id] {
-		if p.ID == id {
+		if p.ID == id && len(db_socket.ChargingPrices) > 0 {
 			db_socket.ChargingPrices[station_id][i] = db_socket.ChargingPrices[station_id][len(db_socket.ChargingPrices)-1]
 			db_socket.ChargingPrices[station_id][len(db_socket.ChargingPrices)-1] = nil
 			db_socket.ChargingPrices[station_id] = db_socket.ChargingPrices[station_id][:len(db_socket.ChargingPrices)-1]

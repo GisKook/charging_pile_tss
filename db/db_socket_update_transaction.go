@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	TRANS_TABLE_NAME_FMT string = "t_charge_order_200601"
-	SQL_UPDATE_TABLE     string = "UPDATE %s SET start_number=%.2f, end_number=%.2f, electricity=%.2f, money=%.2f, cost=%.2f, time=%d, start_time=timestamp '%s', end_time=timestamp '%s', status=%d WHERE order_number = '%s'"
+	TRANS_TABLE_NAME_FMT              string = "t_charge_order_200601"
+	SQL_UPDATE_TABLE_CHARGING_STOPPED string = "UPDATE %s SET start_number=%.2f, end_number=%.2f, electricity=%.2f, money=%.2f, cost=%.2f, time=%d, start_time=timestamp '%s', end_time=timestamp '%s', status=%d WHERE order_number = '%s'"
+	SQL_UPDATE_TABLE_CHARGING         string = "UPDATE %s SET start_number=%.2f, electricity=%.2f, money=%.2f, cost=%.2f, time=%d, start_time=timestamp '%s', status=%d WHERE order_number = '%s'"
 )
 
 func (db_socket *DbSocket) ProccessTransaction() {
@@ -23,13 +24,19 @@ func (db_socket *DbSocket) ProccessTransaction() {
 				log.Println(err)
 			}
 
+			var update_sql string
 			for trans := range transactions {
-				update_sql := fmt.Sprintf(SQL_UPDATE_TABLE, GetTableName(trans.StartTime), trans.StartMeterReading, trans.EndMeterReading, trans.ChargingCapacity, trans.ChargingCost, trans.ChargingCostEle, trans.ChargingDuration, GetTime(trans.StartTime), GetTime(trans.EndTime), trans.Status, trans.TransactionID)
+				if trans.Status == 6 {
+					update_sql = fmt.Sprintf(SQL_UPDATE_TABLE_CHARGING_STOPPED, GetTableName(trans.StartTime), trans.StartMeterReading, trans.EndMeterReading, trans.ChargingCapacity, trans.ChargingCost, trans.ChargingCostEle, trans.ChargingDuration, GetTime(trans.StartTime), GetTime(trans.EndTime), trans.Status, trans.TransactionID)
+					tx.Exec(update_sql)
+					transcation_ids += trans.TransactionID + ","
+					db_socket.NotifyChan <- transcation_ids
+				} else if trans.Status == 5 {
+					update_sql = fmt.Sprintf(SQL_UPDATE_TABLE_CHARGING, GetTableName(trans.StartTime), trans.StartMeterReading, trans.ChargingCapacity, trans.ChargingCost, trans.ChargingCostEle, trans.ChargingDuration, GetTime(trans.StartTime), trans.Status, trans.TransactionID)
+					tx.Exec(update_sql)
+				}
 				log.Println(update_sql)
 
-				tx.Exec(update_sql)
-				transcation_ids += trans.TransactionID + ","
-				db_socket.NotifyChan <- transcation_ids
 			}
 			err = tx.Commit()
 			if err != nil {
@@ -46,6 +53,7 @@ func GetTableName(t uint64) string {
 }
 
 func GetTime(t uint64) string {
+	log.Println(t)
 	_t := time.Unix(int64(t), 0)
 	return _t.Format("2006-01-02 15:04:05")
 }

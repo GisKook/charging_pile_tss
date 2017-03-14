@@ -14,6 +14,12 @@ func CalcCost(station_id uint32, pre_cost float32, pre_cost_ele float32, last_me
 
 	cost_total := pre_cost + (cur_meter_reading-last_meter_reading)*(unit_price+service_price)
 	cost_ele := pre_cost_ele + (cur_meter_reading-last_meter_reading)*unit_price
+	if cost_total < 0 {
+		cost_total = 0
+	}
+	if cost_ele < 0 {
+		cost_ele = 0
+	}
 
 	return cost_total, cost_ele
 }
