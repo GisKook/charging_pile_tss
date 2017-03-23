@@ -16,14 +16,9 @@ func (socket *RedisSocket) GetStationID(pile_status []*charge_pile_status) []uin
 	var station_ids []uint32
 	for _, p := range pile_status {
 		if p.old_status != p.new_status {
-			log.Println("status not equal")
-			log.Println(p.old_status)
-			log.Println(p.new_status)
 			if len(station_ids) == 0 {
 				station_ids = append(station_ids, p.status.StationId)
-				log.Println("add station")
 			} else {
-				log.Println("add station")
 				for _, station_id := range station_ids {
 					if station_id != p.status.StationId {
 						station_ids = append(station_ids, p.status.StationId)
@@ -37,7 +32,6 @@ func (socket *RedisSocket) GetStationID(pile_status []*charge_pile_status) []uin
 }
 
 func (socket *RedisSocket) CalcSingleStation(station_id uint32) (int32, int32, int32, int32) {
-	log.Println("CalcSingleStation")
 	conn := socket.GetConn()
 	defer conn.Close()
 	conn.Do("SELECT", 1)
@@ -82,7 +76,6 @@ func (socket *RedisSocket) CalcSingleStation(station_id uint32) (int32, int32, i
 }
 
 func (socket *RedisSocket) UpdateSingleStation(station uint32, pile_count int32, idle_pile int32, charging_pile int32, error_pile int32) {
-	log.Println("UpdateSingleStation")
 	conn := socket.GetConn()
 	defer conn.Close()
 	conn.Do("SELECT", 0)
@@ -104,9 +97,7 @@ func (socket *RedisSocket) UpdateSingleStation(station uint32, pile_count int32,
 }
 
 func (socket *RedisSocket) UpdateChargeStation(pile_status []*charge_pile_status) {
-	log.Println("UpdateChargeStation")
 	station_ids := socket.GetStationID(pile_status)
-	log.Println(station_ids)
 	//	conn := socket.GetConn()
 	//	defer conn.Close()
 	//	conn.Do("SELECT", 0)

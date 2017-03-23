@@ -4,7 +4,7 @@ import (
 	"github.com/HuKeping/rbtree"
 	"github.com/giskook/charging_pile_tss/conf"
 	"github.com/giskook/charging_pile_tss/pb"
-	"log"
+	//"log"
 	"sync"
 	"time"
 )
@@ -63,7 +63,6 @@ func (sc *Status_Checker) Insert(cpid uint64, time_stamp uint64, recv_time_stamp
 		sc.Mutex_Cpid_Time.Unlock()
 		sc.Mutex_Time_Cpid.Unlock()
 	}()
-	log.Println("insert")
 	//1.insert into rbt_cpid_time
 	//    1.1 if has ->update timevalue
 	//    1.2 if not has -> insert
@@ -154,7 +153,6 @@ func (sc *Status_Checker) Check() {
 		recv_time, cpids_status = sc.Min()
 		if cpids_status != nil {
 			if current_time-recv_time > int64(conf.GetConf().Redis.OfflineThreshold) {
-				log.Println("add off line")
 				for _, cpid := range cpids_status {
 					GetRedisSocket().ChargingPilesChan <- &Report.ChargingPileStatus{
 						Cpid:      cpid.Cpid,

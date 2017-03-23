@@ -16,7 +16,9 @@ const (
 	PROTOCOL_CHARGE_PILE_STATUS_CHARGING uint8 = 1
 	PROTOCOL_CHARGE_PILE_STATUS_STARTED  uint8 = 100
 	PROTOCOL_CHARGE_PILE_STATUS_STOPPED  uint8 = 101
-	PROTOCOL_CHARGE_PILE_STATUS_OFFLINE  uint8 = 255
+
+	PROTOCOL_CHARGE_PILE_STATUS_CHARGING_OFFLINE uint8 = 102
+	PROTOCOL_CHARGE_PILE_STATUS_OFFLINE          uint8 = 255
 
 	PROTOCOL_CHARGE_PILE_STATUS_COMPELETED  uint8 = 6 // for db
 	PROTOCOL_CHARGE_PILE_STATUS_CHARGING_DB uint8 = 5
@@ -42,13 +44,11 @@ func (socket *RedisSocket) ProcessChargingPile() {
 		conn.Close()
 		socket.Mutex_ChargingPiles.Unlock()
 	}()
-	log.Println(len(socket.ChargingPiles))
 	if len(socket.ChargingPiles) != 0 {
 		conn.Do("SELECT", 1)
 
 		var index int = 0
 		var pkg *Report.ChargingPileStatus
-		//log.Println(socket.ChargingPiles)
 		for index, pkg = range socket.ChargingPiles {
 			conn.Send("GET", GetKey(pkg))
 			log.Println(GetKey(pkg))
@@ -77,8 +77,17 @@ func (socket *RedisSocket) ProcessChargingPile() {
 				//log.Println(redis_pile)
 				if redis_pile.Timestamp <= socket.ChargingPiles[i].Timestamp {
 					old_status := redis_pile.Status
-					socket.ProccessIncomingStatus(transactions, redis_pile, socket.ChargingPiles[i])
+					log.Println("")
+					log.Println("")
+					log.Println("socket charge pile >>>>>>>")
+					log.Println(socket.ChargingPiles[i])
+					log.Println("redis charge pile  >>>>>>>")
 					log.Println(redis_pile)
+					socket.ProccessIncomingStatus(transactions, redis_pile, socket.ChargingPiles[i])
+					log.Println("after deal with    >>>>>>>")
+					log.Println(redis_pile)
+					log.Println("")
+					log.Println("")
 
 					tobe_commit_cps = append(tobe_commit_cps,
 						&charge_pile_status{
@@ -114,10 +123,10 @@ func (socket *RedisSocket) ProccessIncomingStatus(ch chan *base.TransactionDetai
 	redis_pile.Timestamp = new_status.Timestamp
 	redis_pile.DasUuid = new_status.DasUuid
 
-	redis_pile.ChargingDuration = new_status.ChargingDuration
-	redis_pile.ChargingCapacity = new_status.ChargingCapacity
-	redis_pile.Status = new_status.Status
 	if new_status.Status == uint32(PROTOCOL_CHARGE_PILE_STATUS_STARTED) {
+		redis_pile.Status = uint32(PROTOCOL_CHARGE_PILE_STATUS_CHARGING)
+		redis_pile.ChargingDuration = 0.0
+		redis_pile.ChargingCapacity = 0.0
 		log.Println("charging started")
 		log.Println(new_status.StartTime)
 		redis_pile.StartTime = new_status.StartTime
@@ -139,9 +148,13 @@ func (socket *RedisSocket) ProccessIncomingStatus(ch chan *base.TransactionDetai
 			StartMeterReading: redis_pile.StartMeterReading,
 		}
 	} else if new_status.Status == uint32(PROTOCOL_CHARGE_PILE_STATUS_CHARGING) {
+		redis_pile.Status = uint32(PROTOCOL_CHARGE_PILE_STATUS_CHARGING)
+		redis_pile.ChargingDuration = new_status.ChargingDuration - uint32(redis_pile.StartTime)
+		redis_pile.ChargingCapacity = new_status.ChargingCapacity - redis_pile.StartMeterReading
+		log.Println("charging charging - ")
 		redis_pile.RealTimeCurrent = new_status.RealTimeCurrent
 		redis_pile.RealTimeVoltage = new_status.RealTimeVoltage
-		redis_pile.CurrentOrderNumber = new_status.CurrentOrderNumber
+		//	redis_pile.CurrentOrderNumber = new_status.CurrentOrderNumber
 		redis_pile.ChargingCost, redis_pile.ChargingCostE = CalcCost(redis_pile.StationId, redis_pile.ChargingCost, redis_pile.ChargingCostE, redis_pile.EndMeterReading, new_status.EndMeterReading, new_status.Timestamp)
 		redis_pile.EndMeterReading = new_status.EndMeterReading
 		socket.ChargingCost <- &base.ChargingCost{
@@ -156,14 +169,14 @@ func (socket *RedisSocket) ProccessIncomingStatus(ch chan *base.TransactionDetai
 			}
 		}
 	} else if new_status.Status == uint32(PROTOCOL_CHARGE_PILE_STATUS_STOPPED) {
+		redis_pile.Status = uint32(PROTOCOL_CHARGE_PILE_STATUS_IDLE) //new_status.Status
+		redis_pile.ChargingDuration = new_status.ChargingDuration - uint32(redis_pile.StartTime)
+		redis_pile.ChargingCapacity = new_status.ChargingCapacity - redis_pile.StartMeterReading
 		redis_pile.ChargingCost, redis_pile.ChargingCostE = CalcCost(redis_pile.StationId, redis_pile.ChargingCost, redis_pile.ChargingCostE, redis_pile.EndMeterReading, new_status.EndMeterReading, new_status.Timestamp)
 		redis_pile.EndMeterReading = new_status.EndMeterReading
 		redis_pile.EndTime = new_status.EndTime
-		redis_pile.RealTimeCurrent = 0.0
-		redis_pile.RealTimeVoltage = 0.0
+		redis_pile.CurrentOrderNumber = new_status.CurrentOrderNumber
 		log.Println("Charge stopped")
-		log.Println(redis_pile.StartTime)
-		log.Println(redis_pile.EndTime)
 
 		ch <- &base.TransactionDetail{
 			TransactionID:     redis_pile.CurrentOrderNumber,
@@ -177,6 +190,30 @@ func (socket *RedisSocket) ProccessIncomingStatus(ch chan *base.TransactionDetai
 			StartMeterReading: redis_pile.StartMeterReading,
 			EndMeterReading:   redis_pile.EndMeterReading,
 		}
-	}
+		redis_pile.RealTimeCurrent = 0.0
+		redis_pile.RealTimeVoltage = 0.0
+		redis_pile.ChargingDuration = 0.0
+		redis_pile.ChargingCapacity = 0.0
+		redis_pile.ChargingCost = 0.0
+		redis_pile.ChargingCostE = 0.0
+	} else if new_status.Status == uint32(PROTOCOL_CHARGE_PILE_STATUS_IDLE) {
+		if redis_pile.Status != uint32(PROTOCOL_CHARGE_PILE_STATUS_CHARGING_OFFLINE) &&
+			redis_pile.Status != uint32(PROTOCOL_CHARGE_PILE_STATUS_CHARGING) {
 
+			redis_pile.Status = uint32(PROTOCOL_CHARGE_PILE_STATUS_IDLE)
+			redis_pile.RealTimeCurrent = 0.0
+			redis_pile.RealTimeVoltage = 0.0
+			redis_pile.ChargingDuration = 0.0
+			redis_pile.ChargingCapacity = 0.0
+			redis_pile.ChargingCost = 0.0
+			redis_pile.ChargingCostE = 0.0
+		}
+	} else if new_status.Status == uint32(PROTOCOL_CHARGE_PILE_STATUS_OFFLINE) {
+		if redis_pile.Status == uint32(PROTOCOL_CHARGE_PILE_STATUS_CHARGING) ||
+			redis_pile.Status == uint32(PROTOCOL_CHARGE_PILE_STATUS_CHARGING_OFFLINE) {
+			redis_pile.Status = uint32(PROTOCOL_CHARGE_PILE_STATUS_CHARGING_OFFLINE)
+		} else {
+			redis_pile.Status = uint32(PROTOCOL_CHARGE_PILE_STATUS_OFFLINE)
+		}
+	}
 }

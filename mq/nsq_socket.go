@@ -114,6 +114,8 @@ func (socket *NsqSocket) SendNotify(transcation_ids string) {
 	}
 
 	data, _ := proto.Marshal(command)
+	log.Println("__________")
+	log.Println(transcation_ids)
 
 	socket.Send(conf.GetConf().Nsq.Producer.TopicWeChat, data)
 }

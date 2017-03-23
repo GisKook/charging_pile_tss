@@ -122,10 +122,10 @@ func (db_socket *DbSocket) del_price(payload string) {
 
 	id, station_id, _ := db_socket.parse_payload_price_common(payload)
 	for i, p := range db_socket.ChargingPrices[station_id] {
-		if p.ID == id && len(db_socket.ChargingPrices) > 0 {
-			db_socket.ChargingPrices[station_id][i] = db_socket.ChargingPrices[station_id][len(db_socket.ChargingPrices)-1]
-			db_socket.ChargingPrices[station_id][len(db_socket.ChargingPrices)-1] = nil
-			db_socket.ChargingPrices[station_id] = db_socket.ChargingPrices[station_id][:len(db_socket.ChargingPrices)-1]
+		if p.ID == id && len(db_socket.ChargingPrices[station_id]) > 0 {
+			db_socket.ChargingPrices[station_id][i] = db_socket.ChargingPrices[station_id][len(db_socket.ChargingPrices[station_id])-1]
+			db_socket.ChargingPrices[station_id][len(db_socket.ChargingPrices[station_id])-1] = nil
+			db_socket.ChargingPrices[station_id] = db_socket.ChargingPrices[station_id][:len(db_socket.ChargingPrices[station_id])-1]
 			return
 		}
 	}
@@ -150,9 +150,17 @@ func (db_socket *DbSocket) GetUnitPrice(station_id uint32, cur_time uint64) (flo
 
 	charging_prices := db_socket.ChargingPrices[uint64(station_id)]
 	if charging_prices != nil {
-		_rest_time := (cur_time % (24 * 60 * 60))
-		_hour := uint8(_rest_time / (60 * 60))
-		_min := uint8((_rest_time % (60 * 60)) / 60)
+		//_rest_time := (cur_time % (24 * 60 * 60))
+		//_hour := uint8(_rest_time / (60 * 60))
+		//_min := uint8((_rest_time % (60 * 60)) / 60)
+		__cur_time := time.Unix(int64(cur_time), 0)
+		_cur_time := __cur_time.Local()
+		_hour := uint8(_cur_time.Hour())
+		_min := uint8(_cur_time.Minute())
+		log.Println("llll")
+		log.Println(_hour)
+		log.Println(_min)
+
 		for index := range charging_prices {
 			price := charging_prices[index]
 			if base.In_period(price.Start_hour, price.Start_min,
