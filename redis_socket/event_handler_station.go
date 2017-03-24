@@ -63,7 +63,7 @@ func (socket *RedisSocket) CalcSingleStation(station_id uint32) (int32, int32, i
 		if err == nil {
 			if redis_pile_status.Status == 0 {
 				idle_pile += 1
-			} else if redis_pile_status.Status == uint32(PROTOCOL_CHARGE_PILE_STATUS_OFFLINE) {
+			} else if redis_pile_status.Status == uint32(PROTOCOL_CHARGE_PILE_STATUS_OFFLINE) || redis_pile_status.Status == uint32(PROTOCOL_CHARGE_PILE_STATUS_CHARGING_OFFLINE) {
 				error_pile += 1
 			} else {
 				charging_pile += 1
