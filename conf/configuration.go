@@ -23,13 +23,14 @@ type NsqConfiguration struct {
 }
 
 type RedisConfigure struct {
-	Addr             string
-	MaxIdle          int
-	MaxActive        int
-	IdleTimeOut      int
-	Passwd           string
-	TranInterval     int
-	OfflineThreshold int
+	Addr              string
+	MaxIdle           int
+	MaxActive         int
+	IdleTimeOut       int
+	Passwd            string
+	TranInterval      int
+	OfflineThreshold  int
+	ReOnlineThreshold int
 }
 
 type DBConfigure struct {

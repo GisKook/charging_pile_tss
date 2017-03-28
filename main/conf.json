@@ -25,7 +25,8 @@
 	"IdleTimeOut":240,
 	"Passwd":"redis",
 	"TranInterval":5,
-	"OfflineThreshold":120
+	"OfflineThreshold":120,
+	"ReOnlineThreshold":120
     },
 
     "DB": {
