@@ -153,6 +153,7 @@ func (socket *RedisSocket) ProccessIncomingStatus(ch chan *base.TransactionDetai
 			redis_pile.Status == uint32(PROTOCOL_CHARGE_PILE_STATUS_CHARGING_OFFLINE) ||
 			redis_pile.Status == uint32(PROTOCOL_CHARGE_PILE_STATUS_STARTED) {
 
+			redis_pile.EndTime = new_status.Timestamp
 			redis_pile.Timestamp = new_status.Timestamp
 			redis_pile.Status = uint32(PROTOCOL_CHARGE_PILE_STATUS_CHARGING)
 			redis_pile.ChargingDuration = new_status.ChargingDuration - uint32(redis_pile.StartTime)
