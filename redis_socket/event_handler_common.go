@@ -205,6 +205,7 @@ func (socket *RedisSocket) ProccessIncomingStatus(ch chan *base.TransactionDetai
 		redis_pile.ChargingCapacity = 0.0
 		redis_pile.ChargingCost = 0.0
 		redis_pile.ChargingCostE = 0.0
+		redis_pile.CurrentOrderNumber = ""
 	} else if new_status.Status == uint32(PROTOCOL_CHARGE_PILE_STATUS_IDLE) {
 		if redis_pile.Status != uint32(PROTOCOL_CHARGE_PILE_STATUS_CHARGING_OFFLINE) {
 			redis_pile.Timestamp = new_status.Timestamp
