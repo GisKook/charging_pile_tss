@@ -186,7 +186,6 @@ func (socket *RedisSocket) ProccessIncomingStatus(ch chan *base.TransactionDetai
 		redis_pile.EndTime = new_status.EndTime
 		redis_pile.CurrentOrderNumber = new_status.CurrentOrderNumber
 		log.Println("Charge stopped")
-		socket.ResetStatus(redis_pile)
 
 		ch <- &base.TransactionDetail{
 			TransactionID:     redis_pile.CurrentOrderNumber,
@@ -200,6 +199,7 @@ func (socket *RedisSocket) ProccessIncomingStatus(ch chan *base.TransactionDetai
 			StartMeterReading: redis_pile.StartMeterReading,
 			EndMeterReading:   redis_pile.EndMeterReading,
 		}
+		socket.ResetStatus(redis_pile)
 	} else if new_status.Status == uint32(PROTOCOL_CHARGE_PILE_STATUS_IDLE) {
 		if redis_pile.Status != uint32(PROTOCOL_CHARGE_PILE_STATUS_CHARGING_OFFLINE) {
 			redis_pile.Timestamp = new_status.Timestamp
