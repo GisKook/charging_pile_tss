@@ -201,7 +201,8 @@ func (socket *RedisSocket) ProccessIncomingStatus(ch chan *base.TransactionDetai
 		}
 		socket.ResetStatus(redis_pile)
 	} else if new_status.Status == uint32(PROTOCOL_CHARGE_PILE_STATUS_IDLE) {
-		if redis_pile.Status != uint32(PROTOCOL_CHARGE_PILE_STATUS_CHARGING_OFFLINE) {
+		if redis_pile.Status != uint32(PROTOCOL_CHARGE_PILE_STATUS_CHARGING_OFFLINE) &&
+			redis_pile.Status != uint32(PROTOCOL_CHARGE_PILE_STATUS_CHARGING) {
 			redis_pile.Timestamp = new_status.Timestamp
 
 			redis_pile.Status = uint32(PROTOCOL_CHARGE_PILE_STATUS_IDLE)
