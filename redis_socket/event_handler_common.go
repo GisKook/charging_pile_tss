@@ -164,15 +164,16 @@ func (socket *RedisSocket) ProccessIncomingStatus(ch chan *base.TransactionDetai
 			//	redis_pile.CurrentOrderNumber = new_status.CurrentOrderNumber
 			redis_pile.ChargingCost, redis_pile.ChargingCostE = CalcCost(redis_pile.StationId, redis_pile.ChargingCost, redis_pile.ChargingCostE, redis_pile.EndMeterReading, new_status.EndMeterReading, new_status.Timestamp)
 			redis_pile.EndMeterReading = new_status.EndMeterReading
-			socket.ChargingCost <- &base.ChargingCost{
-				Uuid: redis_pile.DasUuid,
-				Tid:  redis_pile.Cpid,
-				Cost: uint32(redis_pile.ChargingCost * 100),
-			}
 			if redis_pile.ChargingCost >= redis_pile.PreCharge {
 				socket.StopChargingNotifyChan <- &base.StopChargingNotify{
 					Uuid: redis_pile.DasUuid,
 					Tid:  redis_pile.Cpid,
+				}
+			} else {
+				socket.ChargingCost <- &base.ChargingCost{
+					Uuid: redis_pile.DasUuid,
+					Tid:  redis_pile.Cpid,
+					Cost: uint32(redis_pile.ChargingCost * 100),
 				}
 			}
 		}
