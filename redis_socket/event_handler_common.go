@@ -157,13 +157,16 @@ func (socket *RedisSocket) ProccessIncomingStatus(ch chan *base.TransactionDetai
 			redis_pile.Timestamp = new_status.Timestamp
 			redis_pile.Status = uint32(PROTOCOL_CHARGE_PILE_STATUS_CHARGING)
 			redis_pile.ChargingDuration = new_status.ChargingDuration - uint32(redis_pile.StartTime)
-			redis_pile.ChargingCapacity = new_status.ChargingCapacity - redis_pile.StartMeterReading
 			log.Println("charging charging - ")
 			redis_pile.RealTimeCurrent = new_status.RealTimeCurrent
 			redis_pile.RealTimeVoltage = new_status.RealTimeVoltage
 			//	redis_pile.CurrentOrderNumber = new_status.CurrentOrderNumber
-			redis_pile.ChargingCost, redis_pile.ChargingCostE = CalcCost(redis_pile.StationId, redis_pile.ChargingCost, redis_pile.ChargingCostE, redis_pile.EndMeterReading, new_status.EndMeterReading, new_status.Timestamp)
-			redis_pile.EndMeterReading = new_status.EndMeterReading
+			valid_end_meter_reading := true
+			redis_pile.ChargingCost, redis_pile.ChargingCostE, valid_end_meter_reading = CalcCost(redis_pile.StationId, redis_pile.ChargingCost, redis_pile.ChargingCostE, redis_pile.EndMeterReading, new_status.EndMeterReading, new_status.Timestamp)
+			if valid_end_meter_reading {
+				redis_pile.EndMeterReading = new_status.EndMeterReading
+				redis_pile.ChargingCapacity = new_status.ChargingCapacity - redis_pile.StartMeterReading
+			}
 			if redis_pile.ChargingCost >= redis_pile.PreCharge {
 				socket.StopChargingNotifyChan <- &base.StopChargingNotify{
 					Uuid: redis_pile.DasUuid,
@@ -181,9 +184,13 @@ func (socket *RedisSocket) ProccessIncomingStatus(ch chan *base.TransactionDetai
 		redis_pile.Timestamp = new_status.Timestamp
 		redis_pile.Status = uint32(PROTOCOL_CHARGE_PILE_STATUS_IDLE) //new_status.Status
 		redis_pile.ChargingDuration = new_status.ChargingDuration - uint32(redis_pile.StartTime)
-		redis_pile.ChargingCapacity = new_status.ChargingCapacity - redis_pile.StartMeterReading
-		redis_pile.ChargingCost, redis_pile.ChargingCostE = CalcCost(redis_pile.StationId, redis_pile.ChargingCost, redis_pile.ChargingCostE, redis_pile.EndMeterReading, new_status.EndMeterReading, new_status.Timestamp)
-		redis_pile.EndMeterReading = new_status.EndMeterReading
+		valid_end_meter_reading := true
+		redis_pile.ChargingCost, redis_pile.ChargingCostE, valid_end_meter_reading = CalcCost(redis_pile.StationId, redis_pile.ChargingCost, redis_pile.ChargingCostE, redis_pile.EndMeterReading, new_status.EndMeterReading, new_status.Timestamp)
+
+		if valid_end_meter_reading {
+			redis_pile.EndMeterReading = new_status.EndMeterReading
+			redis_pile.ChargingCapacity = new_status.ChargingCapacity - redis_pile.StartMeterReading
+		}
 		redis_pile.EndTime = new_status.EndTime
 		redis_pile.CurrentOrderNumber = new_status.CurrentOrderNumber
 		log.Println("Charge stopped")

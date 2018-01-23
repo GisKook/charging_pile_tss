@@ -6,9 +6,9 @@ import (
 	"math"
 )
 
-func CalcCost(station_id uint32, pre_cost float32, pre_cost_ele float32, last_meter_reading float32, cur_meter_reading float32, cur_time_stamp uint64) (float32, float32) {
+func CalcCost(station_id uint32, pre_cost float32, pre_cost_ele float32, last_meter_reading float32, cur_meter_reading float32, cur_time_stamp uint64) (float32, float32, bool) {
 	if math.Abs(float64(cur_meter_reading-last_meter_reading)) > 50 { // 50 means 50 uint elec the two next meter_reading shold not be too big
-		return pre_cost, pre_cost_ele
+		return pre_cost, pre_cost_ele, false
 	}
 	unit_price, service_price := db.GetDBSocket().GetUnitPrice(station_id, cur_time_stamp)
 	log.Println("calc cost")
@@ -25,5 +25,5 @@ func CalcCost(station_id uint32, pre_cost float32, pre_cost_ele float32, last_me
 		cost_ele = 0
 	}
 
-	return cost_total, cost_ele
+	return cost_total, cost_ele, true
 }
